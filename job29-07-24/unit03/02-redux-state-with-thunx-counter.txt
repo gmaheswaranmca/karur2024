@@ -1,0 +1,112 @@
+To extend the above counter example with an asynchronous data fetch using Redux Thunk, we'll modify our setup slightly. Redux Toolkit includes `createAsyncThunk` to handle async logic, so let's use that.
+
+### Step-by-Step Example with Async Thunk
+
+1. **Install dependencies:**
+   ```bash
+   npm install axios
+   ```
+
+2. **Create the async thunk:**
+   - In `src/store/counterSlice.js`, add an async thunk to fetch data.
+
+   ```javascript
+   // src/store/counterSlice.js
+   import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+   import axios from 'axios';
+
+   // Define an async thunk to fetch a random number from an API
+   export const fetchRandomNumber = createAsyncThunk(
+     'counter/fetchRandomNumber',
+     async () => {
+       const response = await axios.get('https://random-data-api.com/api/number/random_number');
+       return response.data.integer; // Adjust based on the actual API response structure
+     }
+   );
+
+   export const counterSlice = createSlice({
+     name: 'counter',
+     initialState: {
+       value: 0,
+       status: 'idle', // Added status field for async state
+     },
+     reducers: {
+       increment: (state) => {
+         state.value += 1;
+       },
+       decrement: (state) => {
+         state.value -= 1;
+       },
+       incrementByAmount: (state, action) => {
+         state.value += action.payload;
+       },
+     },
+     extraReducers: (builder) => {
+       builder
+         .addCase(fetchRandomNumber.pending, (state) => {
+           state.status = 'loading';
+         })
+         .addCase(fetchRandomNumber.fulfilled, (state, action) => {
+           state.status = 'succeeded';
+           state.value = action.payload;
+         })
+         .addCase(fetchRandomNumber.rejected, (state) => {
+           state.status = 'failed';
+         });
+     },
+   });
+
+   export const { increment, decrement, incrementByAmount } = counterSlice.actions;
+
+   export default counterSlice.reducer;
+   ```
+
+3. **Update the Counter component:**
+   - In `src/Counter.js`, add a button to trigger the async thunk.
+
+   ```javascript
+   // src/Counter.js
+   import React from 'react';
+   import { useSelector, useDispatch } from 'react-redux';
+   import { increment, decrement, incrementByAmount, fetchRandomNumber } from './store/counterSlice';
+
+   function Counter() {
+     const count = useSelector((state) => state.counter.value);
+     const status = useSelector((state) => state.counter.status);
+     const dispatch = useDispatch();
+
+     return (
+       <div>
+         <h1>Counter: {count}</h1>
+         <button onClick={() => dispatch(increment())}>Increment</button>
+         <button onClick={() => dispatch(decrement())}>Decrement</button>
+         <button onClick={() => dispatch(incrementByAmount(5))}>Increment by 5</button>
+         <button onClick={() => dispatch(fetchRandomNumber())}>Fetch Random Number</button>
+         {status === 'loading' && <p>Loading...</p>}
+         {status === 'failed' && <p>Failed to fetch data.</p>}
+       </div>
+     );
+   }
+
+   export default Counter;
+   ```
+
+4. **Run the application:**
+   ```bash
+   npm start
+   ```
+
+### Explanation
+
+1. **Async Thunk (`fetchRandomNumber`):**
+   - `createAsyncThunk` is used to define an async action. It takes a string prefix for the action type and an async function that performs the actual data fetching.
+   - In this example, we use `axios` to fetch a random number from an API. Adjust the API URL and response handling according to the actual API you are using.
+
+2. **Slice Configuration (`counterSlice`):**
+   - `extraReducers` is used to handle the different states of the async thunk (`pending`, `fulfilled`, and `rejected`).
+   - When the `fetchRandomNumber` thunk is pending, the status is set to 'loading'. When it is fulfilled, the status is set to 'succeeded' and the value in the state is updated with the fetched data. When it is rejected, the status is set to 'failed'.
+
+3. **Counter Component (`Counter.js`):**
+   - The component now displays a button to trigger the async action and also displays messages based on the loading status.
+
+This extension of the counter example demonstrates how to handle asynchronous operations in Redux using Thunks, which is a common use case for fetching data from an API.
